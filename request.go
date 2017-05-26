@@ -65,6 +65,8 @@ type Request struct {
 
 	TLSClientCertPath string
 	TLSClientKeyPath  string
+	TLSClientCert     []byte
+	TLSClientKey      []byte
 	TLSSkipVerify     bool
 
 	KeepAlive        bool
@@ -291,14 +293,26 @@ func (hr *Request) WithTimeout(timeout time.Duration) *Request {
 }
 
 // WithClientTLSCert sets a tls cert on the transport for the request.
-func (hr *Request) WithClientTLSCert(certPath string) *Request {
+func (hr *Request) WithClientTLSCertPath(certPath string) *Request {
 	hr.TLSClientCertPath = certPath
 	return hr
 }
 
+// WithClientTLSCert sets a tls cert on the transport for the request.
+func (hr *Request) WithClientTLSCert(cert []byte) *Request {
+	hr.TLSClientCert = cert
+	return hr
+}
+
 // WithClientTLSKey sets a tls key on the transport for the request.
-func (hr *Request) WithClientTLSKey(keyPath string) *Request {
+func (hr *Request) WithClientTLSKeyPath(keyPath string) *Request {
 	hr.TLSClientKeyPath = keyPath
+	return hr
+}
+
+// WithClientTLSKey sets a tls key on the transport for the request.
+func (hr *Request) WithClientTLSKey(key []byte) *Request {
+	hr.TLSClientKey = key
 	return hr
 }
 
@@ -610,6 +624,7 @@ func (hr *Request) Deserialized(deserialize Deserializer) (*ResponseMeta, error)
 
 func (hr *Request) requiresCustomTransport() bool {
 	return (!isEmpty(hr.TLSClientCertPath) && !isEmpty(hr.TLSClientKeyPath)) ||
+		(!isEmpty(string(hr.TLSClientCert)) && !isEmpty(string(hr.TLSClientKey))) ||
 		hr.transport != nil ||
 		hr.createTransportHandler != nil ||
 		hr.TLSSkipVerify
@@ -644,8 +659,17 @@ func (hr *Request) Transport() (*http.Transport, error) {
 
 	transport.Dial = dialer.Dial
 
-	if !isEmpty(hr.TLSClientCertPath) && !isEmpty(hr.TLSClientKeyPath) {
-		cert, err := tls.LoadX509KeyPair(hr.TLSClientCertPath, hr.TLSClientKeyPath)
+	if (!isEmpty(hr.TLSClientCertPath) && !isEmpty(hr.TLSClientKeyPath)) || !isEmpty(string(hr.TLSClientCert)) && !isEmpty(string(hr.TLSClientKey)) {
+		var cert tls.Certificate
+		var err error
+
+		if !isEmpty(hr.TLSClientCertPath) {
+			// If we are using cert paths
+			cert, err = tls.LoadX509KeyPair(hr.TLSClientCertPath, hr.TLSClientKeyPath)
+		} else {
+			// If we are using raw certs
+			cert, err = tls.X509KeyPair(hr.TLSClientCert, hr.TLSClientKey)
+		}
 		if err != nil {
 			return nil, exception.Wrap(err)
 		}
