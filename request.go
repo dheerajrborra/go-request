@@ -140,6 +140,8 @@ func (hr *Request) WithMockProvider(provider MockedResponseProvider) *Request {
 // WithLogger enables logging with HTTPRequestLogLevelErrors.
 func (hr *Request) WithLogger(agent *logger.Agent) *Request {
 	hr.logger = agent
+	hr.logger.AddEventListener(Event, NewOutgoingListener(WriteOutgoingRequest))
+	hr.logger.AddEventListener(EventResponse, NewOutgoingResponseListener(WriteOutgoingRequestResponse))
 	return hr
 }
 
@@ -292,7 +294,7 @@ func (hr *Request) WithTimeout(timeout time.Duration) *Request {
 	return hr
 }
 
-// WithClientTLSCert sets a tls cert on the transport for the request.
+// WithClientTLSCertPath sets a tls cert on the transport for the request.
 func (hr *Request) WithClientTLSCertPath(certPath string) *Request {
 	hr.TLSClientCertPath = certPath
 	return hr
@@ -304,7 +306,7 @@ func (hr *Request) WithClientTLSCert(cert []byte) *Request {
 	return hr
 }
 
-// WithClientTLSKey sets a tls key on the transport for the request.
+// WithClientTLSKeyPath sets a tls key on the transport for the request.
 func (hr *Request) WithClientTLSKeyPath(keyPath string) *Request {
 	hr.TLSClientKeyPath = keyPath
 	return hr
