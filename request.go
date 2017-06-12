@@ -140,8 +140,13 @@ func (hr *Request) WithMockProvider(provider MockedResponseProvider) *Request {
 // WithLogger enables logging with HTTPRequestLogLevelErrors.
 func (hr *Request) WithLogger(agent *logger.Agent) *Request {
 	hr.logger = agent
-	hr.logger.AddEventListener(Event, NewOutgoingListener(WriteOutgoingRequest))
-	hr.logger.AddEventListener(EventResponse, NewOutgoingResponseListener(WriteOutgoingRequestResponse))
+	if !agent.HasListener(Event) {
+		agent.AddEventListener(Event, NewOutgoingListener(WriteOutgoingRequest))
+	}
+
+	if agent.HasListener(EventResponse) {
+		agent.AddEventListener(EventResponse, NewOutgoingResponseListener(WriteOutgoingRequestResponse))
+	}
 	return hr
 }
 
