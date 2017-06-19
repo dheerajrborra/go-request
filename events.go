@@ -25,7 +25,7 @@ func NewOutgoingListener(handler func(writer *logger.Writer, ts logger.TimeSourc
 func WriteOutgoingRequest(writer *logger.Writer, ts logger.TimeSource, req *Meta) {
 	buffer := writer.GetBuffer()
 	defer writer.PutBuffer(buffer)
-	buffer.WriteString(writer.Colorize(string(Event), logger.ColorGreen))
+	buffer.WriteString("[" + writer.Colorize(string(Event), logger.ColorGreen) + "]")
 	buffer.WriteRune(logger.RuneSpace)
 	buffer.WriteString(fmt.Sprintf("%s %s", req.Verb, req.URL.String()))
 	writer.WriteWithTimeSource(ts, buffer.Bytes())
@@ -35,7 +35,7 @@ func WriteOutgoingRequest(writer *logger.Writer, ts logger.TimeSource, req *Meta
 func WriteOutgoingRequestBody(writer *logger.Writer, ts logger.TimeSource, req *Meta) {
 	buffer := writer.GetBuffer()
 	defer writer.PutBuffer(buffer)
-	buffer.WriteString(writer.Colorize(string(Event), logger.ColorGreen))
+	buffer.WriteString("[" + writer.Colorize(string(Event), logger.ColorGreen) + "]")
 	buffer.WriteRune(logger.RuneSpace)
 	buffer.WriteString("request body")
 	buffer.WriteRune(logger.RuneNewline)
@@ -54,7 +54,7 @@ func NewOutgoingResponseListener(handler func(writer *logger.Writer, ts logger.T
 func WriteOutgoingRequestResponse(writer *logger.Writer, ts logger.TimeSource, req *Meta, res *ResponseMeta, body []byte) {
 	buffer := writer.GetBuffer()
 	defer writer.PutBuffer(buffer)
-	buffer.WriteString(writer.Colorize(string(EventResponse), logger.ColorGreen))
+	buffer.WriteString("[" + writer.Colorize(string(EventResponse), logger.ColorGreen) + "]")
 	buffer.WriteRune(logger.RuneSpace)
 	buffer.WriteString(fmt.Sprintf("%s %s %s", writer.ColorizeByStatusCode(res.StatusCode, strconv.Itoa(res.StatusCode)), req.Verb, req.URL.String()))
 	buffer.WriteRune(logger.RuneNewline)
