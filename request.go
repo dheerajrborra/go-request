@@ -2,6 +2,7 @@ package request
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"encoding/xml"
@@ -81,6 +82,7 @@ type Request struct {
 
 	err error
 
+	ctx                             context.Context
 	transport                       *http.Transport
 	createTransportHandler          CreateTransportHandler
 	incomingResponseHandler         ResponseHandler
@@ -110,6 +112,12 @@ func (hr *Request) OnCreateTransport(hook CreateTransportHandler) *Request {
 // OnRequest configures an event receiver.
 func (hr *Request) OnRequest(hook OutgoingRequestHandler) *Request {
 	hr.outgoingRequestHandler = hook
+	return hr
+}
+
+// WithContext sets a context for the request.
+func (hr *Request) WithContext(ctx context.Context) *Request {
+	hr.ctx = ctx
 	return hr
 }
 
@@ -455,6 +463,10 @@ func (hr *Request) Request() (*http.Request, error) {
 	req, err := http.NewRequest(hr.Verb, workingURL.String(), bytes.NewBuffer(hr.PostBody()))
 	if err != nil {
 		return nil, exception.Wrap(err)
+	}
+
+	if hr.ctx != nil {
+		req = req.WithContext(hr.ctx)
 	}
 
 	if !isEmpty(hr.BasicAuthUsername) {
