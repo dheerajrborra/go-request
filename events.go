@@ -9,14 +9,14 @@ import (
 
 const (
 	// Event is a diagnostics agent event flag.
-	Event logger.EventFlag = "request"
+	Event logger.Event = "request"
 	// EventResponse is a diagnostics agent event flag.
-	EventResponse logger.EventFlag = "request.response"
+	EventResponse logger.Event = "request.response"
 )
 
 // NewOutgoingListener creates a new logger handler for `EventFlagOutgoingResponse` events.
 func NewOutgoingListener(handler func(writer *logger.Writer, ts logger.TimeSource, req *Meta)) logger.EventListener {
-	return func(writer *logger.Writer, ts logger.TimeSource, eventFlag logger.EventFlag, state ...interface{}) {
+	return func(writer *logger.Writer, ts logger.TimeSource, eventFlag logger.Event, state ...interface{}) {
 		handler(writer, ts, state[0].(*Meta))
 	}
 }
@@ -45,7 +45,7 @@ func WriteOutgoingRequestBody(writer *logger.Writer, ts logger.TimeSource, req *
 
 // NewOutgoingResponseListener creates a new logger handler for `EventFlagOutgoingResponse` events.
 func NewOutgoingResponseListener(handler func(writer *logger.Writer, ts logger.TimeSource, req *Meta, res *ResponseMeta, body []byte)) logger.EventListener {
-	return func(writer *logger.Writer, ts logger.TimeSource, eventFlag logger.EventFlag, state ...interface{}) {
+	return func(writer *logger.Writer, ts logger.TimeSource, eventFlag logger.Event, state ...interface{}) {
 		handler(writer, ts, state[0].(*Meta), state[1].(*ResponseMeta), state[2].([]byte))
 	}
 }
