@@ -2,6 +2,7 @@ package request
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"encoding/xml"
@@ -81,6 +82,7 @@ type Request struct {
 
 	err error
 
+	ctx                             context.Context
 	transport                       *http.Transport
 	createTransportHandler          CreateTransportHandler
 	incomingResponseHandler         ResponseHandler
@@ -113,6 +115,12 @@ func (hr *Request) OnRequest(hook OutgoingRequestHandler) *Request {
 	return hr
 }
 
+// WithContext sets a context for the request.
+func (hr *Request) WithContext(ctx context.Context) *Request {
+	hr.ctx = ctx
+	return hr
+}
+
 // WithState adds a state object to the request for later usage.
 func (hr *Request) WithState(state interface{}) *Request {
 	hr.state = state
@@ -140,13 +148,6 @@ func (hr *Request) WithMockProvider(provider MockedResponseProvider) *Request {
 // WithLogger enables logging with HTTPRequestLogLevelErrors.
 func (hr *Request) WithLogger(agent *logger.Agent) *Request {
 	hr.logger = agent
-	if !agent.HasListener(Event) {
-		agent.AddEventListener(Event, NewOutgoingListener(WriteOutgoingRequest))
-	}
-
-	if agent.HasListener(EventResponse) {
-		agent.AddEventListener(EventResponse, NewOutgoingResponseListener(WriteOutgoingRequestResponse))
-	}
 	return hr
 }
 
@@ -455,6 +456,10 @@ func (hr *Request) Request() (*http.Request, error) {
 	req, err := http.NewRequest(hr.Verb, workingURL.String(), bytes.NewBuffer(hr.PostBody()))
 	if err != nil {
 		return nil, exception.Wrap(err)
+	}
+
+	if hr.ctx != nil {
+		req = req.WithContext(hr.ctx)
 	}
 
 	if !isEmpty(hr.BasicAuthUsername) {
