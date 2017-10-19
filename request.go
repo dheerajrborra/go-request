@@ -211,6 +211,11 @@ func (hr *Request) WithCombinedPath(components ...string) *Request {
 	return hr
 }
 
+// WithURLf sets the url based on a format and args.
+func (hr *Request) WithURLf(format string, args ...interface{}) *Request {
+	return hr.WithURL(fmt.Sprintf(format, args...))
+}
+
 // WithURL sets the request target url whole hog.
 func (hr *Request) WithURL(urlString string) *Request {
 	workingURL, err := url.Parse(urlString)
