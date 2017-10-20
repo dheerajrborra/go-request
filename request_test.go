@@ -30,6 +30,11 @@ type testObject struct {
 	Value        float64   `json:"value" xml:"value"`
 }
 
+type errorObject struct {
+	Code    int    `json:"code" xml:"code"`
+	Message string `json:"message" xml:"message"`
+}
+
 func newTestObject() testObject {
 	to := testObject{}
 	to.ID = rand.Int()
@@ -39,8 +44,19 @@ func newTestObject() testObject {
 	return to
 }
 
+func newErrorObject() errorObject {
+	err := errorObject{}
+	err.Code = 1
+	err.Message = "error message"
+	return err
+}
+
 func okMeta() *ResponseMeta {
 	return &ResponseMeta{StatusCode: http.StatusOK}
+}
+
+func noContentMeta() *ResponseMeta {
+	return &ResponseMeta{StatusCode: http.StatusNoContent}
 }
 
 func errorMeta() *ResponseMeta {
@@ -51,20 +67,25 @@ func notFoundMeta() *ResponseMeta {
 	return &ResponseMeta{StatusCode: http.StatusNotFound}
 }
 
+func writeHeader(w http.ResponseWriter, meta *ResponseMeta) {
+	if !isEmpty(meta.ContentType) {
+		w.Header().Set("Content-Type", meta.ContentType)
+	} else {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	}
+
+	for key, value := range meta.Headers {
+		w.Header().Set(key, strings.Join(value, ";"))
+	}
+
+	w.WriteHeader(meta.StatusCode)
+}
+
 func writeJSON(w http.ResponseWriter, meta *ResponseMeta, response interface{}) error {
 	bytes, err := json.Marshal(response)
 	if err == nil {
-		if !isEmpty(meta.ContentType) {
-			w.Header().Set("Content-Type", meta.ContentType)
-		} else {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		}
+		writeHeader(w, meta)
 
-		for key, value := range meta.Headers {
-			w.Header().Set(key, strings.Join(value, ";"))
-		}
-
-		w.WriteHeader(meta.StatusCode)
 		count, err := w.Write(bytes)
 		if count == 0 {
 			return exception.New("writeJSON didnt write any bytes")
@@ -80,15 +101,7 @@ func writeJSON(w http.ResponseWriter, meta *ResponseMeta, response interface{}) 
 
 func mockEchoEndpoint(meta *ResponseMeta) *httptest.Server {
 	return getMockServer(func(w http.ResponseWriter, r *http.Request) {
-		if !isEmpty(meta.ContentType) {
-			w.Header().Set("Content-Type", meta.ContentType)
-		} else {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		}
-
-		for key, value := range meta.Headers {
-			w.Header().Set(key, strings.Join(value, ";"))
-		}
+		writeHeader(w, meta)
 
 		defer r.Body.Close()
 		bytes, _ := ioutil.ReadAll(r.Body)
@@ -115,6 +128,16 @@ func mockTLSEndpoint(meta *ResponseMeta, returnWithObject interface{}, validatio
 		}
 
 		writeJSON(w, meta, returnWithObject)
+	})
+}
+
+func mockNoContentEndpoint(meta *ResponseMeta, validations validationFunc) *httptest.Server {
+	return getMockServer(func(w http.ResponseWriter, r *http.Request) {
+		if validations != nil {
+			validations(r)
+		}
+
+		writeHeader(w, meta)
 	})
 }
 
@@ -151,6 +174,18 @@ func TestHttpGet(t *testing.T) {
 	assert.Equal(returnedObject, testObject)
 }
 
+func TestHttpGetWithErrorHandler(t *testing.T) {
+	assert := assert.New(t)
+	returnedObject := newErrorObject()
+	ts := mockEndpoint(errorMeta(), returnedObject, nil)
+	testObject := testObject{}
+	errorObject := errorObject{}
+	meta, err := New().AsGet().WithURL(ts.URL).JSONWithErrorHandler(&testObject, &errorObject)
+	assert.Nil(err)
+	assert.Equal(http.StatusInternalServerError, meta.StatusCode)
+	assert.Equal(returnedObject, errorObject)
+}
+
 func TestHttpGetWithExpiringTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip("This test involves a 500ms timeout.")
@@ -183,6 +218,30 @@ func TestHttpGetWithTimeout(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal(http.StatusOK, meta.StatusCode)
 	assert.Equal(returnedObject, testObject)
+}
+
+func TestHttpGetNoContent(t *testing.T) {
+	assert := assert.New(t)
+	emptyObject := testObject{}
+	ts := mockNoContentEndpoint(noContentMeta(), nil)
+	testObject := testObject{}
+	meta, err := New().AsGet().WithURL(ts.URL).JSONWithMeta(&testObject)
+	assert.Nil(err)
+	assert.Equal(http.StatusNoContent, meta.StatusCode)
+	assert.Equal(emptyObject, testObject)
+}
+
+func TestHttpGetNoContentWithErrorHandler(t *testing.T) {
+	assert := assert.New(t)
+	emptyObject := testObject{}
+	ts := mockNoContentEndpoint(noContentMeta(), nil)
+	errorObject := testObject{}
+	testObject := testObject{}
+	meta, err := New().AsGet().WithURL(ts.URL).JSONWithErrorHandler(&testObject, &errorObject)
+	assert.Nil(err)
+	assert.Equal(http.StatusNoContent, meta.StatusCode)
+	assert.Equal(emptyObject, testObject)
+	assert.Equal(emptyObject, errorObject)
 }
 
 func TestTlsHttpGet(t *testing.T) {
