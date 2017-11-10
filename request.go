@@ -91,26 +91,26 @@ type Request struct {
 	mockProvider                    MockedResponseProvider
 }
 
-// OnResponse configures an event receiver.
-func (hr *Request) OnResponse(hook ResponseHandler) *Request {
+// WithOnResponse configures an event receiver.
+func (hr *Request) WithOnResponse(hook ResponseHandler) *Request {
 	hr.incomingResponseHandler = hook
 	return hr
 }
 
-// OnResponseStateful configures an event receiver that includes the request state.
-func (hr *Request) OnResponseStateful(hook StatefulResponseHandler) *Request {
+// WithOnResponseStateful configures an event receiver that includes the request state.
+func (hr *Request) WithOnResponseStateful(hook StatefulResponseHandler) *Request {
 	hr.statefulIncomingResponseHandler = hook
 	return hr
 }
 
-// OnCreateTransport configures an event receiver.
-func (hr *Request) OnCreateTransport(hook CreateTransportHandler) *Request {
+// WithOnCreateTransport configures an event receiver.
+func (hr *Request) WithOnCreateTransport(hook CreateTransportHandler) *Request {
 	hr.createTransportHandler = hook
 	return hr
 }
 
-// OnRequest configures an event receiver.
-func (hr *Request) OnRequest(hook OutgoingRequestHandler) *Request {
+// WithOnRequest configures an event receiver.
+func (hr *Request) WithOnRequest(hook OutgoingRequestHandler) *Request {
 	hr.outgoingRequestHandler = hook
 	return hr
 }
