@@ -402,7 +402,7 @@ func TestOnRequestHook(t *testing.T) {
 	ts := mockEchoEndpoint(okMeta())
 
 	called := false
-	_, _, err := New().AsPut().WithPostBody([]byte("foobar")).WithURL(ts.URL).OnRequest(func(meta *Meta) {
+	_, _, err := New().AsPut().WithPostBody([]byte("foobar")).WithURL(ts.URL).WithOnRequest(func(meta *Meta) {
 		called = true
 	}).StringWithMeta()
 	assert.Nil(err)
