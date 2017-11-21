@@ -74,7 +74,7 @@ type Request struct {
 	KeepAliveTimeout time.Duration
 	Label            string
 
-	logger         *logger.Agent
+	log            *logger.Logger
 	state          interface{}
 	postedFiles    []PostedFile
 	responseBuffer Buffer
@@ -146,14 +146,14 @@ func (hr *Request) WithMockProvider(provider MockedResponseProvider) *Request {
 }
 
 // WithLogger enables logging with HTTPRequestLogLevelErrors.
-func (hr *Request) WithLogger(agent *logger.Agent) *Request {
-	hr.logger = agent
+func (hr *Request) WithLogger(agent *logger.Logger) *Request {
+	hr.log = agent
 	return hr
 }
 
 // Logger returns the request diagnostics agent.
-func (hr *Request) Logger() *logger.Agent {
-	return hr.logger
+func (hr *Request) Logger() *logger.Logger {
+	return hr.log
 }
 
 // WithTransport sets a transport for the request.
@@ -767,8 +767,11 @@ func (hr *Request) logRequest() {
 		hr.outgoingRequestHandler(meta)
 	}
 
-	if hr.logger != nil {
-		hr.logger.OnEvent(Event, meta)
+	if hr.log != nil {
+		hr.log.Trigger(EventOutgoing{
+			ts:  time.Now().UTC(),
+			req: meta,
+		})
 	}
 }
 
@@ -780,8 +783,13 @@ func (hr *Request) logResponse(resMeta *ResponseMeta, responseBody []byte, state
 		hr.incomingResponseHandler(hr.Meta(), resMeta, responseBody)
 	}
 
-	if hr.logger != nil {
-		hr.logger.OnEvent(EventResponse, hr.Meta(), resMeta, responseBody, state)
+	if hr.log != nil {
+		hr.log.Trigger(EventResponse{
+			ts:   time.Now().UTC(),
+			req:  hr.Meta(),
+			res:  resMeta,
+			body: responseBody,
+		})
 	}
 }
 

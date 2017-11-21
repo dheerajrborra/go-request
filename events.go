@@ -1,63 +1,115 @@
 package request
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"strconv"
+	"time"
 
 	logger "github.com/blendlabs/go-logger"
 )
 
 const (
-	// Event is a diagnostics agent event flag.
-	Event logger.Event = "request"
-	// EventResponse is a diagnostics agent event flag.
-	EventResponse logger.Event = "request.response"
+	// Flag is a logger event flag.
+	Flag logger.Flag = "request"
+	// FlagResponse is a logger event flag.
+	FlagResponse logger.Flag = "request.response"
 )
 
-// NewOutgoingListener creates a new logger handler for `EventFlagOutgoingResponse` events.
-func NewOutgoingListener(handler func(writer *logger.Writer, ts logger.TimeSource, req *Meta)) logger.EventListener {
-	return func(writer *logger.Writer, ts logger.TimeSource, eventFlag logger.Event, state ...interface{}) {
-		handler(writer, ts, state[0].(*Meta))
+// EventOutgoing is a logger event for outgoing requests.
+type EventOutgoing struct {
+	ts  time.Time
+	req *Meta
+}
+
+// Flag returns the event flag.
+func (eo EventOutgoing) Flag() logger.Flag {
+	return Flag
+}
+
+// Timestamp returns the event timestamp.
+func (eo EventOutgoing) Timestamp() time.Time {
+	return eo.ts
+}
+
+// Request returns the request meta.
+func (eo EventOutgoing) Request() *Meta {
+	return eo.req
+}
+
+// WriteText writes an outgoing request as text to a given buffer.
+func (eo EventOutgoing) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
+	buf.WriteString(fmt.Sprintf("%s %s", eo.req.Verb, eo.req.URL.String()))
+	if len(eo.req.Body) > 0 {
+		buf.WriteRune(logger.RuneNewline)
+		buf.WriteString("request body")
+		buf.WriteRune(logger.RuneNewline)
+		buf.Write(eo.req.Body)
 	}
+	return nil
 }
 
-// WriteOutgoingRequest is a helper method to write outgoing request events to a logger writer.
-func WriteOutgoingRequest(writer *logger.Writer, ts logger.TimeSource, req *Meta) {
-	buffer := writer.GetBuffer()
-	defer writer.PutBuffer(buffer)
-	buffer.WriteString("[" + writer.Colorize(string(Event), logger.ColorGreen) + "]")
-	buffer.WriteRune(logger.RuneSpace)
-	buffer.WriteString(fmt.Sprintf("%s %s", req.Verb, req.URL.String()))
-	writer.WriteWithTimeSource(ts, buffer.Bytes())
+// MarshalJSON marshals an outgoing request event as json.
+func (eo EventOutgoing) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"flag": eo.Flag(),
+		"ts":   eo.ts,
+		"req":  eo.req,
+	})
 }
 
-// WriteOutgoingRequestBody is a helper method to write outgoing request bodies to a logger writer.
-func WriteOutgoingRequestBody(writer *logger.Writer, ts logger.TimeSource, req *Meta) {
-	buffer := writer.GetBuffer()
-	defer writer.PutBuffer(buffer)
-	buffer.WriteString("[" + writer.Colorize(string(Event), logger.ColorGreen) + "]")
-	buffer.WriteRune(logger.RuneSpace)
-	buffer.WriteString("request body")
-	buffer.WriteRune(logger.RuneNewline)
-	buffer.Write(req.Body)
-	writer.WriteWithTimeSource(ts, buffer.Bytes())
+// EventResponse is a response to outgoing requests.
+type EventResponse struct {
+	ts   time.Time
+	req  *Meta
+	res  *ResponseMeta
+	body []byte
 }
 
-// NewOutgoingResponseListener creates a new logger handler for `EventFlagOutgoingResponse` events.
-func NewOutgoingResponseListener(handler func(writer *logger.Writer, ts logger.TimeSource, req *Meta, res *ResponseMeta, body []byte)) logger.EventListener {
-	return func(writer *logger.Writer, ts logger.TimeSource, eventFlag logger.Event, state ...interface{}) {
-		handler(writer, ts, state[0].(*Meta), state[1].(*ResponseMeta), state[2].([]byte))
+// Flag returns the event flag.
+func (er EventResponse) Flag() logger.Flag {
+	return FlagResponse
+}
+
+// Timestamp returns the event timestamp.
+func (er EventResponse) Timestamp() time.Time {
+	return er.ts
+}
+
+// Request returns the request meta.
+func (er EventResponse) Request() *Meta {
+	return er.req
+}
+
+// Response returns the response meta.
+func (er EventResponse) Response() *ResponseMeta {
+	return er.res
+}
+
+// Body returns the outgoing request body.
+func (er EventResponse) Body() []byte {
+	return er.body
+}
+
+// WriteText writes the event to a text writer.
+func (er EventResponse) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
+	buf.WriteString(fmt.Sprintf("%s %s %s", tf.ColorizeStatusCode(er.res.StatusCode), er.req.Verb, er.req.URL.String()))
+	if len(er.body) > 0 {
+		buf.WriteRune(logger.RuneNewline)
+		buf.WriteString("response body")
+		buf.WriteRune(logger.RuneNewline)
+		buf.Write(er.body)
 	}
+	return nil
 }
 
-// WriteOutgoingRequestResponse is a helper method to write outgoing request response events to a logger writer.
-func WriteOutgoingRequestResponse(writer *logger.Writer, ts logger.TimeSource, req *Meta, res *ResponseMeta, body []byte) {
-	buffer := writer.GetBuffer()
-	defer writer.PutBuffer(buffer)
-	buffer.WriteString("[" + writer.Colorize(string(EventResponse), logger.ColorGreen) + "]")
-	buffer.WriteRune(logger.RuneSpace)
-	buffer.WriteString(fmt.Sprintf("%s %s %s", writer.ColorizeByStatusCode(res.StatusCode, strconv.Itoa(res.StatusCode)), req.Verb, req.URL.String()))
-	buffer.WriteRune(logger.RuneNewline)
-	buffer.Write(body)
-	writer.WriteWithTimeSource(ts, buffer.Bytes())
+// MarshalJSON marshals an outgoing request event as json.
+func (er EventResponse) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"flag": er.Flag(),
+		"ts":   er.ts,
+		"req":  er.req,
+		"res":  er.res,
+		"body": er.body,
+	})
 }
