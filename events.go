@@ -52,9 +52,9 @@ func (eo EventOutgoing) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) er
 // MarshalJSON marshals an outgoing request event as json.
 func (eo EventOutgoing) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"flag": eo.Flag(),
-		"ts":   eo.ts,
-		"req":  eo.req,
+		logger.JSONFieldFlag:      eo.Flag(),
+		logger.JSONFieldTimestamp: eo.Timestamp(),
+		"req": eo.req,
 	})
 }
 
@@ -106,8 +106,8 @@ func (er EventResponse) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) er
 // MarshalJSON marshals an outgoing request event as json.
 func (er EventResponse) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"flag": er.Flag(),
-		"ts":   er.ts,
+		logger.JSONFieldFlag:      er.Flag(),
+		logger.JSONFieldTimestamp: er.Timestamp(),
 		"req":  er.req,
 		"res":  er.res,
 		"body": er.body,
