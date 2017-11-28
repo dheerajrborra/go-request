@@ -2,7 +2,6 @@ package request
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -16,50 +15,56 @@ const (
 	FlagResponse logger.Flag = "request.response"
 )
 
-// EventOutgoing is a logger event for outgoing requests.
-type EventOutgoing struct {
+// NewRequestListener creates a new request listener.
+func NewRequestListener(listener func(Event)) logger.Listener {
+	return func(e logger.Event) {
+		if typed, isTyped := e.(Event); isTyped {
+			listener(typed)
+		}
+	}
+}
+
+// Event is a logger event for outgoing requests.
+type Event struct {
 	ts  time.Time
 	req *Meta
 }
 
 // Flag returns the event flag.
-func (eo EventOutgoing) Flag() logger.Flag {
+func (re Event) Flag() logger.Flag {
 	return Flag
 }
 
 // Timestamp returns the event timestamp.
-func (eo EventOutgoing) Timestamp() time.Time {
-	return eo.ts
+func (re Event) Timestamp() time.Time {
+	return re.ts
 }
 
 // Request returns the request meta.
-func (eo EventOutgoing) Request() *Meta {
-	return eo.req
+func (re Event) Request() *Meta {
+	return re.req
 }
 
 // WriteText writes an outgoing request as text to a given buffer.
-func (eo EventOutgoing) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
-	buf.WriteString(fmt.Sprintf("%s %s", eo.req.Verb, eo.req.URL.String()))
-	if len(eo.req.Body) > 0 {
+func (re Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) {
+	buf.WriteString(fmt.Sprintf("%s %s", re.req.Verb, re.req.URL.String()))
+	if len(re.req.Body) > 0 {
 		buf.WriteRune(logger.RuneNewline)
 		buf.WriteString("request body")
 		buf.WriteRune(logger.RuneNewline)
-		buf.Write(eo.req.Body)
+		buf.Write(re.req.Body)
 	}
-	return nil
 }
 
-// MarshalJSON marshals an outgoing request event as json.
-func (eo EventOutgoing) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		logger.JSONFieldFlag:      eo.Flag(),
-		logger.JSONFieldTimestamp: eo.Timestamp(),
-		"req": eo.req,
-	})
+// WriteJSON implements logger.JSONWritable.
+func (re Event) WriteJSON() logger.JSONObj {
+	return logger.JSONObj{
+		"req": re.req,
+	}
 }
 
-// EventResponse is a response to outgoing requests.
-type EventResponse struct {
+// ResponseEvent is a response to outgoing requests.
+type ResponseEvent struct {
 	ts   time.Time
 	req  *Meta
 	res  *ResponseMeta
@@ -67,49 +72,46 @@ type EventResponse struct {
 }
 
 // Flag returns the event flag.
-func (er EventResponse) Flag() logger.Flag {
+func (re ResponseEvent) Flag() logger.Flag {
 	return FlagResponse
 }
 
 // Timestamp returns the event timestamp.
-func (er EventResponse) Timestamp() time.Time {
-	return er.ts
+func (re ResponseEvent) Timestamp() time.Time {
+	return re.ts
 }
 
 // Request returns the request meta.
-func (er EventResponse) Request() *Meta {
-	return er.req
+func (re ResponseEvent) Request() *Meta {
+	return re.req
 }
 
 // Response returns the response meta.
-func (er EventResponse) Response() *ResponseMeta {
-	return er.res
+func (re ResponseEvent) Response() *ResponseMeta {
+	return re.res
 }
 
 // Body returns the outgoing request body.
-func (er EventResponse) Body() []byte {
-	return er.body
+func (re ResponseEvent) Body() []byte {
+	return re.body
 }
 
 // WriteText writes the event to a text writer.
-func (er EventResponse) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
-	buf.WriteString(fmt.Sprintf("%s %s %s", tf.ColorizeStatusCode(er.res.StatusCode), er.req.Verb, er.req.URL.String()))
-	if len(er.body) > 0 {
+func (re ResponseEvent) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) {
+	buf.WriteString(fmt.Sprintf("%s %s %s", tf.ColorizeStatusCode(re.res.StatusCode), re.req.Verb, re.req.URL.String()))
+	if len(re.body) > 0 {
 		buf.WriteRune(logger.RuneNewline)
 		buf.WriteString("response body")
 		buf.WriteRune(logger.RuneNewline)
-		buf.Write(er.body)
+		buf.Write(re.body)
 	}
-	return nil
 }
 
-// MarshalJSON marshals an outgoing request event as json.
-func (er EventResponse) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		logger.JSONFieldFlag:      er.Flag(),
-		logger.JSONFieldTimestamp: er.Timestamp(),
-		"req":  er.req,
-		"res":  er.res,
-		"body": er.body,
-	})
+// WriteJSON implements logger.JSONWritable.
+func (re ResponseEvent) WriteJSON() logger.JSONObj {
+	return logger.JSONObj{
+		"req":  re.req,
+		"res":  re.res,
+		"body": re.body,
+	}
 }

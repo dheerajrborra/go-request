@@ -768,7 +768,7 @@ func (hr *Request) logRequest() {
 	}
 
 	if hr.log != nil {
-		hr.log.Trigger(EventOutgoing{
+		hr.log.Trigger(Event{
 			ts:  time.Now().UTC(),
 			req: meta,
 		})
@@ -784,7 +784,7 @@ func (hr *Request) logResponse(resMeta *ResponseMeta, responseBody []byte, state
 	}
 
 	if hr.log != nil {
-		hr.log.Trigger(EventResponse{
+		hr.log.Trigger(ResponseEvent{
 			ts:   time.Now().UTC(),
 			req:  hr.Meta(),
 			res:  resMeta,
