@@ -1,6 +1,7 @@
 package request
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/blendlabs/go-assert"
 	exception "github.com/blendlabs/go-exception"
+	logger "github.com/blendlabs/go-logger"
 )
 
 type statusObject struct {
@@ -407,4 +409,23 @@ func TestOnRequestHook(t *testing.T) {
 	}).StringWithMeta()
 	assert.Nil(err)
 	assert.True(called)
+}
+
+func TestRequestLogger(t *testing.T) {
+	assert := assert.New(t)
+	returnedObject := newTestObject()
+	ts := mockEndpoint(okMeta(), returnedObject, func(r *http.Request) {
+		assert.Equal("GET", r.Method)
+	})
+
+	buffer := bytes.NewBuffer(nil)
+	log := logger.All().WithWriter(logger.NewTextWriter(buffer).WithUseColor(false).WithShowTimestamp(false))
+	defer log.Close()
+
+	testObject := testObject{}
+	_, err := New().WithLogger(log).AsGet().WithURL(ts.URL).JSONWithMeta(&testObject)
+	assert.Nil(err)
+
+	log.Drain()
+	assert.True(strings.HasPrefix(buffer.String(), "[request] GET http://127.0.0.1"), buffer.String())
 }

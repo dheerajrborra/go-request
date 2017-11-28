@@ -98,10 +98,8 @@ func (re ResponseEvent) Body() []byte {
 
 // WriteText writes the event to a text writer.
 func (re ResponseEvent) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) {
-	buf.WriteString(fmt.Sprintf("%s %s %s", tf.ColorizeStatusCode(re.res.StatusCode), re.req.Verb, re.req.URL.String()))
+	buf.WriteString(fmt.Sprintf("%s %s %s", re.req.Verb, re.req.URL.String(), tf.ColorizeStatusCode(re.res.StatusCode)))
 	if len(re.body) > 0 {
-		buf.WriteRune(logger.RuneNewline)
-		buf.WriteString("response body")
 		buf.WriteRune(logger.RuneNewline)
 		buf.Write(re.body)
 	}
