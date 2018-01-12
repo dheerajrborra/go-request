@@ -332,8 +332,8 @@ func (hr *Request) WithClientTLSKey(key []byte) *Request {
 	return hr
 }
 
-// WithClientTLSCAPool sets the client TLS ca pool for the request.
-func (hr *Request) WithClientTLSCAPool(certPool *x509.CertPool) *Request {
+// WithTLSRootCAPool sets the root TLS ca pool for the request.
+func (hr *Request) WithTLSRootCAPool(certPool *x509.CertPool) *Request {
 	hr.TLSCAPool = certPool
 	return hr
 }
@@ -699,14 +699,14 @@ func (hr *Request) Transport() (*http.Transport, error) {
 			return nil, exception.Wrap(err)
 		}
 		tlsConfig := &tls.Config{
-			ClientCAs:          hr.TLSCAPool,
+			RootCAs:            hr.TLSCAPool,
 			InsecureSkipVerify: hr.TLSSkipVerify,
 			Certificates:       []tls.Certificate{cert},
 		}
 		transport.TLSClientConfig = tlsConfig
 	} else {
 		tlsConfig := &tls.Config{
-			ClientCAs:          hr.TLSCAPool,
+			RootCAs:            hr.TLSCAPool,
 			InsecureSkipVerify: hr.TLSSkipVerify,
 		}
 		transport.TLSClientConfig = tlsConfig
