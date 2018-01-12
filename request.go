@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -69,6 +70,8 @@ type Request struct {
 	TLSClientCert     []byte
 	TLSClientKey      []byte
 	TLSSkipVerify     bool
+
+	TLSCAPool *x509.CertPool
 
 	KeepAlive        bool
 	KeepAliveTimeout time.Duration
@@ -326,6 +329,12 @@ func (hr *Request) WithClientTLSKeyPath(keyPath string) *Request {
 // WithClientTLSKey sets a tls key on the transport for the request.
 func (hr *Request) WithClientTLSKey(key []byte) *Request {
 	hr.TLSClientKey = key
+	return hr
+}
+
+// WithClientTLSCAPool sets the client TLS ca pool for the request.
+func (hr *Request) WithClientTLSCAPool(certPool *x509.CertPool) *Request {
+	hr.TLSCAPool = certPool
 	return hr
 }
 
@@ -642,6 +651,7 @@ func (hr *Request) Deserialized(deserialize Deserializer) (*ResponseMeta, error)
 func (hr *Request) requiresCustomTransport() bool {
 	return (!isEmpty(hr.TLSClientCertPath) && !isEmpty(hr.TLSClientKeyPath)) ||
 		(!isEmpty(string(hr.TLSClientCert)) && !isEmpty(string(hr.TLSClientKey))) ||
+		hr.TLSCAPool != nil ||
 		hr.transport != nil ||
 		hr.createTransportHandler != nil ||
 		hr.TLSSkipVerify
@@ -681,22 +691,22 @@ func (hr *Request) Transport() (*http.Transport, error) {
 		var err error
 
 		if !isEmpty(hr.TLSClientCertPath) {
-			// If we are using cert paths
 			cert, err = tls.LoadX509KeyPair(hr.TLSClientCertPath, hr.TLSClientKeyPath)
 		} else {
-			// If we are using raw certs
 			cert, err = tls.X509KeyPair(hr.TLSClientCert, hr.TLSClientKey)
 		}
 		if err != nil {
 			return nil, exception.Wrap(err)
 		}
 		tlsConfig := &tls.Config{
+			ClientCAs:          hr.TLSCAPool,
 			InsecureSkipVerify: hr.TLSSkipVerify,
 			Certificates:       []tls.Certificate{cert},
 		}
 		transport.TLSClientConfig = tlsConfig
 	} else {
 		tlsConfig := &tls.Config{
+			ClientCAs:          hr.TLSCAPool,
 			InsecureSkipVerify: hr.TLSSkipVerify,
 		}
 		transport.TLSClientConfig = tlsConfig
