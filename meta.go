@@ -63,19 +63,21 @@ func NewResponseMeta(res *http.Response) *ResponseMeta {
 	meta.StatusCode = res.StatusCode
 	meta.ContentLength = res.ContentLength
 
-	contentTypeHeader := res.Header["Content-Type"]
-	if contentTypeHeader != nil && len(contentTypeHeader) > 0 {
-		meta.ContentType = strings.Join(contentTypeHeader, ";")
-	}
-
-	contentEncodingHeader := res.Header["Content-Encoding"]
-	if contentEncodingHeader != nil && len(contentEncodingHeader) > 0 {
-		meta.ContentEncoding = strings.Join(contentEncodingHeader, ";")
-	}
+	meta.ContentType = tryHeader(res.Header, "Content-Type", "content-type")
+	meta.ContentEncoding = tryHeader(res.Header, "Content-Encoding", "content-encoding")
 
 	meta.Headers = res.Header
 	meta.Cert = NewCertInfo(res)
 	return meta
+}
+
+func tryHeader(headers http.Header, keys ...string) string {
+	for _, key := range keys {
+		if values, hasValues := headers[key]; hasValues {
+			return strings.Join(values, ";")
+		}
+	}
+	return ""
 }
 
 // ResponseMeta is just the meta information for an http response.
