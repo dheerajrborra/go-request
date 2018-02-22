@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"time"
 
@@ -86,6 +87,7 @@ type Request struct {
 	err error
 
 	ctx                             context.Context
+	trace                           *httptrace.ClientTrace
 	transport                       *http.Transport
 	createTransportHandler          CreateTransportHandler
 	incomingResponseHandler         ResponseHandler
@@ -121,6 +123,12 @@ func (hr *Request) WithOnRequest(hook OutgoingRequestHandler) *Request {
 // WithContext sets a context for the request.
 func (hr *Request) WithContext(ctx context.Context) *Request {
 	hr.ctx = ctx
+	return hr
+}
+
+// WithClientTrace sets up a trace for the request.
+func (hr *Request) WithClientTrace(trace *httptrace.ClientTrace) *Request {
+	hr.trace = trace
 	return hr
 }
 
@@ -474,6 +482,10 @@ func (hr *Request) Request() (*http.Request, error) {
 
 	if hr.ctx != nil {
 		req = req.WithContext(hr.ctx)
+	}
+
+	if hr.trace != nil {
+		req = req.WithContext(httptrace.WithClientTrace(req.Context(), hr.trace))
 	}
 
 	if !isEmpty(hr.BasicAuthUsername) {

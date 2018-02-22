@@ -8,11 +8,12 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httptrace"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/blendlabs/go-assert"
+	assert "github.com/blendlabs/go-assert"
 	exception "github.com/blendlabs/go-exception"
 	logger "github.com/blendlabs/go-logger"
 )
@@ -419,7 +420,7 @@ func TestRequestLogger(t *testing.T) {
 	})
 
 	buffer := bytes.NewBuffer(nil)
-	log := logger.All().WithWriter(logger.NewTextWriter(buffer).WithUseColor(false).WithShowTimestamp(false))
+	log := logger.All().WithWriter(logger.NewTextWriterForOutput(buffer).WithUseColor(false).WithShowTimestamp(false))
 	defer log.Close()
 
 	testObject := testObject{}
@@ -428,4 +429,24 @@ func TestRequestLogger(t *testing.T) {
 
 	log.Drain()
 	assert.True(strings.HasPrefix(buffer.String(), "[request] GET http://127.0.0.1"), buffer.String())
+}
+
+func TestClientTrace(t *testing.T) {
+	assert := assert.New(t)
+	returnedObject := newTestObject()
+	ts := mockEndpoint(okMeta(), returnedObject, func(r *http.Request) {
+		assert.Equal("GET", r.Method)
+	})
+
+	receivedByte := false
+	trace := &httptrace.ClientTrace{
+		GotFirstResponseByte: func() {
+			receivedByte = true
+		},
+	}
+
+	testObject := testObject{}
+	_, err := New().WithClientTrace(trace).AsGet().WithURL(ts.URL).JSONWithMeta(&testObject)
+	assert.Nil(err)
+	assert.True(receivedByte)
 }
