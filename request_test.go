@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httptrace"
 	"strings"
 	"testing"
 	"time"
@@ -427,5 +428,24 @@ func TestRequestLogger(t *testing.T) {
 	assert.Nil(err)
 
 	log.Drain()
-	assert.True(strings.HasPrefix(buffer.String(), "[request] GET http://127.0.0.1"), buffer.String())
+}
+
+func TestClientTrace(t *testing.T) {
+	assert := assert.New(t)
+	returnedObject := newTestObject()
+	ts := mockEndpoint(okMeta(), returnedObject, func(r *http.Request) {
+		assert.Equal("GET", r.Method)
+	})
+
+	receivedByte := false
+	trace := &httptrace.ClientTrace{
+		GotFirstResponseByte: func() {
+			receivedByte = true
+		},
+	}
+
+	testObject := testObject{}
+	_, err := New().WithClientTrace(trace).AsGet().WithURL(ts.URL).JSONWithMeta(&testObject)
+	assert.Nil(err)
+	assert.True(receivedByte)
 }
