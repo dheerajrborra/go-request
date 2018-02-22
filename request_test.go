@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blendlabs/go-assert"
+	assert "github.com/blendlabs/go-assert"
 	exception "github.com/blendlabs/go-exception"
 	logger "github.com/blendlabs/go-logger"
 )
@@ -419,7 +419,7 @@ func TestRequestLogger(t *testing.T) {
 	})
 
 	buffer := bytes.NewBuffer(nil)
-	log := logger.All().WithWriter(logger.NewTextWriter(buffer).WithUseColor(false).WithShowTimestamp(false))
+	log := logger.All().WithWriter(logger.NewTextWriterForOutput(buffer).WithUseColor(false).WithShowTimestamp(false))
 	defer log.Close()
 
 	testObject := testObject{}
