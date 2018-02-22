@@ -428,6 +428,7 @@ func TestRequestLogger(t *testing.T) {
 	assert.Nil(err)
 
 	log.Drain()
+	assert.True(strings.HasPrefix(buffer.String(), "[request] GET http://127.0.0.1"), buffer.String())
 }
 
 func TestClientTrace(t *testing.T) {
