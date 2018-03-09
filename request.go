@@ -638,8 +638,7 @@ func (hr *Request) JSONError(errorObject interface{}) (*ResponseMeta, error) {
 
 // XML unmarshals the response as xml to an object with metadata.
 func (hr *Request) XML(destination interface{}) error {
-	_, err := hr.deserialize(newXMLDeserializer(destination))
-	return err
+	return hr.deserialize(newXMLDeserializer(destination))
 }
 
 // XMLWithMeta unmarshals the response as xml to an object with metadata.
